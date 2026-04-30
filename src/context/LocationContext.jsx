@@ -7,13 +7,16 @@ const LocationContext = createContext(null)
 export function LocationProvider({ children }) {
   const { user } = useAuth()
 
-  const [locations, setLocations] = useState([])   // saved cities array
-  const [loading,   setLoading]   = useState(false)
+  const [locations, setLocations] = useState([])
+  const [loading,   setLoading]   = useState(true)  // start true so Dashboard waits
   const [error,     setError]     = useState(null)
 
-  // ── Fetch all saved locations for the logged-in user ──────
   const fetchLocations = useCallback(async () => {
-    if (!user) { setLocations([]); return }
+    if (!user) {
+      setLocations([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
 
@@ -29,14 +32,11 @@ export function LocationProvider({ children }) {
     setLocations(data ?? [])
   }, [user])
 
-  // Load on mount / user change
   useEffect(() => { fetchLocations() }, [fetchLocations])
 
-  // ── Add a city ────────────────────────────────────────────
   const addLocation = useCallback(async (city) => {
     if (!user) return { success: false, error: 'Not authenticated' }
 
-    // Prevent duplicates (same lat/lon rounded to 2dp)
     const isDupe = locations.some(l =>
       Math.abs(l.lat - city.lat) < 0.01 &&
       Math.abs(l.lon - city.lon) < 0.01
@@ -50,8 +50,8 @@ export function LocationProvider({ children }) {
       lat:           city.lat,
       lon:           city.lon,
       owm_city_id:   city.owmCityId ?? null,
-      display_order: locations.length,  // append to end
-      is_primary:    locations.length === 0, // first city = primary
+      display_order: locations.length,
+      is_primary:    locations.length === 0,
     }
 
     const { data, error } = await supabase
@@ -66,7 +66,6 @@ export function LocationProvider({ children }) {
     return { success: true, data }
   }, [user, locations])
 
-  // ── Remove a city ─────────────────────────────────────────
   const removeLocation = useCallback(async (locationId) => {
     if (!user) return { success: false, error: 'Not authenticated' }
 
@@ -74,13 +73,12 @@ export function LocationProvider({ children }) {
       .from('saved_locations')
       .delete()
       .eq('id', locationId)
-      .eq('user_id', user.id) // extra safety
+      .eq('user_id', user.id)
 
     if (error) return { success: false, error: error.message }
 
     setLocations(prev => {
       const filtered = prev.filter(l => l.id !== locationId)
-      // If we removed the primary, promote the next one
       if (filtered.length > 0 && !filtered.some(l => l.is_primary)) {
         filtered[0] = { ...filtered[0], is_primary: true }
         supabase.from('saved_locations').update({ is_primary: true }).eq('id', filtered[0].id)
@@ -91,12 +89,8 @@ export function LocationProvider({ children }) {
     return { success: true }
   }, [user])
 
-  // ── Reorder (drag or arrow) ───────────────────────────────
   const reorderLocations = useCallback(async (reordered) => {
-    // Optimistic update
     setLocations(reordered)
-
-    // Persist new display_order values
     const updates = reordered.map((loc, i) =>
       supabase.from('saved_locations')
         .update({ display_order: i })
@@ -106,11 +100,9 @@ export function LocationProvider({ children }) {
     await Promise.all(updates)
   }, [user])
 
-  // ── Set primary city ──────────────────────────────────────
   const setPrimary = useCallback(async (locationId) => {
     if (!user) return
 
-    // Clear all primaries then set new one
     await supabase.from('saved_locations')
       .update({ is_primary: false })
       .eq('user_id', user.id)

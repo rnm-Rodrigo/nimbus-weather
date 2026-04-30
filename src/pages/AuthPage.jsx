@@ -1,22 +1,17 @@
 import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import LoginForm  from '../components/auth/LoginForm'
 import SignupForm from '../components/auth/SignupForm'
 
 export default function AuthPage() {
-  const [mode, setMode] = useState('login') // 'login' | 'signup'
-  const navigate  = useNavigate()
-  const location  = useLocation()
+  const [mode, setMode] = useState('login')
+  const navigate = useNavigate()
 
-  const from = location.state?.from?.pathname || '/dashboard'
-
-  const handleSuccess = () => navigate(from, { replace: true })
-
+  const handleSuccess = () => navigate('/dashboard', { replace: true })
   const toggle = () => setMode(m => m === 'login' ? 'signup' : 'login')
 
   return (
     <div className="auth-page">
-      {/* Animated background orbs */}
       <div className="auth-bg">
         <div className="auth-orb auth-orb-1" />
         <div className="auth-orb auth-orb-2" />
@@ -24,7 +19,6 @@ export default function AuthPage() {
         <div className="auth-stars" />
       </div>
 
-      {/* Branding */}
       <div className="auth-brand">
         <div className="auth-brand-icon">
           <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
@@ -37,7 +31,6 @@ export default function AuthPage() {
         <span className="auth-brand-name">Nimbus</span>
       </div>
 
-      {/* Card */}
       <div className="auth-card" key={mode}>
         {mode === 'login'
           ? <LoginForm  onSuccess={handleSuccess} onSwitch={toggle} />

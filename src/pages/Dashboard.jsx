@@ -28,7 +28,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (locLoading) return
-    if (locations.length === 0) return
+    if (locations.length === 0) {
+      setActiveLocation(null)
+      return
+    }
     if (!activeLocation) {
       const primary = locations.find(l => l.is_primary) ?? locations[0]
       setActiveLocation({
